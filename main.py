@@ -4,6 +4,8 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
+# Я просто скопировал это из доков
+# Дает добро на чтение сообщений, реакций, списка пользователей и истории сообщений
 intents = discord.Intents.default()
 intents.messages = True
 intents.reactions = True
@@ -13,10 +15,12 @@ intents.message_content = True
 load_dotenv()
 DISCORD_TOKEN = os.getenv("BOT_TOKEN")
 
+# Установка префикса для бота
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
 
 # Просто в консоль для теста
+# Работает
 @bot.event
 async def on_ready():
     print("Готов к труду и обороне!")
@@ -26,7 +30,7 @@ async def on_ready():
 # .hello
 @bot.command()
 async def hello(ctx):
-    await ctx.send('Привет! Я твой супер-секретный Санта!')
+    await ctx.send('Привет! Я твой супер-секретный Санта-*Дедушка*!')
 
 
 # Отображаем список всех доступных команд
@@ -46,7 +50,7 @@ async def help_me(ctx):
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send("Дедушка не знает, чего ты хочешь!")
+        await ctx.send("*Дедушка* не знает, чего ты хочешь!")
     else:
         # Обработка других ошибок
         # Понять, бы зачем...
@@ -58,7 +62,7 @@ async def on_command_error(ctx, error):
 @bot.command()
 async def santa_preparing(ctx):
     # Запрашиваем у пользователя ID сообщения (можно получить через ЛКМ)
-    await ctx.send("Дедушке нужен ID сообщения для начала!")
+    await ctx.send("*Дедушке* нужен ID сообщения для начала!")
 
     # Ожидание ответа от пользователя
     # проверяем, что автор и отправитель один
@@ -76,13 +80,60 @@ async def santa_preparing(ctx):
     try:
         message = await ctx.channel.fetch_message(message_id)
         await message.add_reaction('🎄')  # Добавляем реакцию "елочка"
-        await ctx.send("Дедушка добавил реакцию!")
+        await ctx.send("*Дедушка* добавил реакцию!")
     except discord.NotFound:
-        await ctx.send("Дедушка не нашел такое сообщение!")
+        await ctx.send("*Дедушка* не нашел такое сообщение!")
+    # Спасибо, гпт за эту ошибку
     except discord.Forbidden:
-        await ctx.send("Дедушке не разрешено добавлять реакции!")
+        await ctx.send("*Дедушке* не разрешено добавлять реакции!")
+    # И за эту тоже
     except discord.HTTPException:
-        await ctx.send("Произошла ошибка при добавлении реакции!")
+        await ctx.send("*Произошла* ошибка при добавлении реакции!")
+
+    # НУЖЕ ОБРАБОТЧИК УЖЕ ДОБАВЛЕННОЙ РЕАКЦИИ
+    # Я НЕ ЗНАЮ, КАК
+
+
+# Вывод списка тех, кто поставил реацию
+# .santa_waiting
+@bot.command()
+async def santa_waiting(ctx):
+    await ctx.send("Дедушке нужно ID сообщения для работы.")
+
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit(
+        )
+
+    msg = await bot.wait_for('message', check=check, timeout=30.0)
+    message_id = int(msg.content)  # Исправлено опечатку с `coontent`
+
+    try:
+        message = await ctx.channel.fetch_message(message_id)
+        await ctx.send("*Дедушка* нашел сообщение! И видит...")
+
+        # Проверка реакций на сообщении
+        users_with_reactions = []
+        for reaction in message.reactions:
+            if str(reaction.emoji) == '🎄':  # Проверяем, что реакция - елочка
+                # че за ошибка - не понимаю
+                async for user in reaction.users():
+                    # Надо запомнить, полезная штука
+                    if not user.bot:  # Исключаем ботов из списка
+                        users_with_reactions.append(user.name)
+
+        if users_with_reactions:
+            await ctx.send(
+                f"Пользователи, которые поставили реакцию 🎄: {', '.join(users_with_reactions)}"
+            )
+        else:
+            await ctx.send("Никто не поставил реакцию 🎄 на этом сообщении.")
+
+    except discord.NotFound:
+        await ctx.send("*Дедушка* не нашел такое сообщение!")
+    except discord.Forbidden:
+        await ctx.send("У *Дедушки* нет прав на чтение сообщений или реакции!")
+    except discord.HTTPException:
+        await ctx.send("Произошла ошибка.")
 
 
 bot.run(DISCORD_TOKEN)
