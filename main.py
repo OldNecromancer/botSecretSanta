@@ -15,6 +15,7 @@ DISCORD_TOKEN = os.getenv("BOT_TOKEN")
 
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
+
 # Просто в консоль для теста
 @bot.event
 async def on_ready():
@@ -32,7 +33,24 @@ async def hello(ctx):
 # .hello, .help, ...
 @bot.command()
 async def help_me(ctx):
-    await ctx.send('Тебе нужна помощь с командами? Вот список: ')
+    commands_list = """
+    Дедушка использует "." для обращения!
+    Список команд:
+    • hello: *Дедушка* скажет тебе "привет".
+    • help_me: Нужна помощь? *Дедушка* поможет!
+    """
+    await ctx.send(commands_list)
+
+
+# Обработчик ошибочных ситуаций
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send("Дедушка не знает, чего ты хочешь!")
+    else:
+        # Обработка других ошибок
+        # Понять, бы зачем...
+        raise error
 
 
 bot.run(DISCORD_TOKEN)
