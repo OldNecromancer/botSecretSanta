@@ -23,6 +23,10 @@ bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 # Работает
 @bot.event
 async def on_ready():
+    await bot.change_presence(
+        status=discord.Status.online,
+        activity=discord.Game(name="🎁сбор подарков🎁")
+    )
     print("Готов к труду и обороне!")
 
 
