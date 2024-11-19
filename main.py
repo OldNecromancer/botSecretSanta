@@ -1,6 +1,8 @@
+# discord 2.3.2
 import discord
 from discord.ext import commands
 
+# python-dotenv 1.0.1
 import os
 from dotenv import load_dotenv
 
@@ -20,7 +22,6 @@ DISCORD_TOKEN = os.getenv("BOT_TOKEN")
 # Установка префикса для бота
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 
-
 # Просто в консоль для теста
 # Работает
 @bot.event
@@ -29,13 +30,11 @@ async def on_ready():
                               activity=discord.Game(name="🎁сбор подарков🎁"))
     print("Готов к труду и обороне!")
 
-
 # Тестовая команда
 # .hello
 @bot.command()
 async def hello(ctx):
     await ctx.send('Привет! Я твой супер-секретный Санта-*Дедушка*!')
-
 
 # Отображаем список всех доступных команд
 # .hello, .help, ...
@@ -49,8 +48,8 @@ async def help_me(ctx):
     """
     await ctx.send(commands_list)
 
-
-# Обработчик ошибок
+# Обработчик неверных команд
+# Пашет
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
@@ -59,7 +58,6 @@ async def on_command_error(ctx, error):
         # Обработка других ошибок
         # Понять, бы зачем...
         raise error
-
 
 # Пытаюсь в обработку реакций и их добавление
 # .santa_preparing
@@ -91,12 +89,12 @@ async def santa_preparing(ctx):
     except discord.Forbidden:
         await ctx.send("*Дедушке* не разрешено добавлять реакции!")
     # И за эту тоже
+    # Не уверен, что она нужна
     except discord.HTTPException:
         await ctx.send("*Произошла* ошибка при добавлении реакции!")
 
-    # НУЖЕ ОБРАБОТЧИК УЖЕ ДОБАВЛЕННОЙ РЕАКЦИИ
+    # НУЖЕН ОБРАБОТЧИК УЖЕ ДОБАВЛЕННОЙ РЕАКЦИИ
     # Я НЕ ЗНАЮ, КАК
-
 
 # Вывод списка тех, кто поставил реацию
 # .santa_waiting
@@ -105,8 +103,7 @@ async def santa_waiting(ctx):
     await ctx.send("Дедушке нужно ID сообщения для работы.")
 
     def check(m):
-        return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit(
-        )
+        return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit()
 
     msg = await bot.wait_for('message', check=check, timeout=30.0)
     message_id = int(msg.content)  # Исправлено опечатку с `coontent`
@@ -126,9 +123,7 @@ async def santa_waiting(ctx):
                         users_with_reactions.append(user.name)
 
         if users_with_reactions:
-            await ctx.send(
-                f"Пользователи, которые поставили реакцию 🎄: {', '.join(users_with_reactions)}"
-            )
+            await ctx.send(f"Пользователи, которые поставили реакцию 🎄: {', '.join(users_with_reactions)}")
         else:
             await ctx.send("Никто не поставил реакцию 🎄 на этом сообщении.")
 
@@ -136,8 +131,6 @@ async def santa_waiting(ctx):
         await ctx.send("*Дедушка* не нашел такое сообщение!")
     except discord.Forbidden:
         await ctx.send("У *Дедушки* нет прав на чтение сообщений или реакции!")
-    except discord.HTTPException:
-        await ctx.send("Произошла ошибка.")
 
 # Шаффл + вывод списка вида САНТА - ПОЛУЧАТЕЛЬ
 # .santa_christmas
@@ -148,34 +141,49 @@ async def santa_christmas(ctx):
     def check(m):
         return m.author == ctx.author and m.channel == ctx.channel and m.content.isdigit()
 
+    # Кидаем таймер, чтобы не ждал вечность
     try:
         msg = await bot.wait_for('message', check=check, timeout=30.0)
         message_id = int(msg.content)
+
+        # Получаем сообщение по ID
         message = await ctx.channel.fetch_message(message_id)
+        reaction = discord.utils.get(message.reactions, emoji="🎄")
 
-        # Проверяем, есть ли реакция :christmas_tree:
-        for reaction in message.reactions:
-            if str(reaction.emoji) == "🎄":
-                users = [user async for user in reaction.users() if not user.bot]
+        # Микрочек
+        if reaction is None:
+            await ctx.send("Под этим сообщением нет реакции 🎄!")
+            return
 
-                if len(users) < 2:
-                    await ctx.send("Недостаточно участников для Секретного Санты.")
-                    return
+        # Сбор пользователей
+        users = []
+        async for user in reaction.users():
+            if not user.bot:
+                users.append(user)
 
-                # Перемешиваем и создаем пары
-                random.shuffle(users)
-                pairs = [(users[i], users[(i + 1) % len(users)]) for i in range(len(users))]
+        # Миниум должен быть санта+балбес
+        if len(users) < 2:
+            await ctx.send("Недостаточно участников для игры!")
+            return
 
-                # Отправляем результат
-                result = "\n".join([f"{giver.display_name} -> {receiver.display_name}" for giver, receiver in pairs])
-                await ctx.send(f"Результаты:\n{result}")
-                return
+        # Перемешиваем список участников
+        random.shuffle(users)
 
-        await ctx.send("Под этим сообщением нет реакции 🎄.")
+        # Создаем пары (Санта -> Получатель)
+        pairs = [(users[i], users[(i + 1) % len(users)]) for i in range(len(users))]
 
+        # Рассылка сообщений
+        # стек врет, flatten нельзя юзать
+        for santa, target in pairs:
+            try:
+                await santa.send(f"Привет, {santa.name}! Ты Секретный *Дедушка*-Мороз для {target.name} 🎁")
+            except discord.Forbidden:
+                await ctx.send(f"*Дедушке* не удалось отправить сообщение {santa.mention}. Возможно, он отключил личные сообщения?")
+        await ctx.send("Сообщение разосланы! *Дедушка* может отдохнуть...")
+    # Дефолт ошибки
     except discord.NotFound:
         await ctx.send("*Дедушка* не нашел такое сообщение!")
     except discord.HTTPException:
-        await ctx.send("Произошла ошибка при получении сообщения.")
+        await ctx.send("Ошибка со стороны Discord.")
 
 bot.run(DISCORD_TOKEN)
